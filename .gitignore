@@ -1,0 +1,10 @@
+.vscode
+build/
+*.exe
+*.old
+*.ilk
+*.pdb
+*.o
+*.obj
+*.log
+ignore*
