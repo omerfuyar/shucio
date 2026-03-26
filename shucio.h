@@ -272,6 +272,16 @@ static DWORD SHU_CONSOLE_MODE_RESTORE;
 static struct termios SHU_TERMIOS_RESTORE;
 #endif
 
+void (*SHU_AT_EXIT_FUNCTION)(void) = NULL;
+
+static void SHU_AT_EXIT(void)
+{
+    if (SHU_AT_EXIT_FUNCTION != NULL)
+    {
+        SHU_AT_EXIT_FUNCTION();
+    }
+}
+
 #define SHU_Assert(condition, str, ...)                                                                               \
     do                                                                                                                \
     {                                                                                                                 \
@@ -284,7 +294,8 @@ static struct termios SHU_TERMIOS_RESTORE;
 
 void SHU_Initialize(void)
 {
-    atexit(SHU_Terminate);
+    SHU_AT_EXIT_FUNCTION = SHU_Terminate;
+    atexit(SHU_AT_EXIT);
 
 #ifdef _WIN32
     HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -298,7 +309,7 @@ void SHU_Initialize(void)
 
     struct termios rawTermios = SHU_TERMIOS_RESTORE;
 
-    rawTermios.c_lflag &= ~(ECHO | ICANON);
+    rawTermios.c_lflag &= ~((tcflag_t)ECHO | (tcflag_t)ICANON);
     rawTermios.c_cc[VMIN] = 1;
     rawTermios.c_cc[VTIME] = 0;
 
@@ -308,7 +319,7 @@ void SHU_Initialize(void)
 
 void SHU_Terminate(void)
 {
-    atexit(NULL);
+    SHU_AT_EXIT_FUNCTION = NULL;
 
     SHU_SetCursorVisibility(1);
     SHU_SetAttribute(SHUAttribute_Reset);
