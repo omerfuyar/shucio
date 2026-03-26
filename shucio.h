@@ -312,7 +312,7 @@ void SHU_Terminate(void)
 
     SHU_SetCursorVisibility(1);
     SHU_SetAttribute(SHUAttribute_Reset);
-    SHU_SetCursorVisibility(1);
+    SHU_SetTerminalAlternate(0);
 
 #ifdef _WIN32
     SetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE), SHU_CONSOLE_MODE_RESTORE);
