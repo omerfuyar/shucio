@@ -242,7 +242,7 @@ void SHU_ClearTerminal(void);
 
 /// @brief Outputs a single character to the terminal.
 /// @param c Character to output.
-void SHU_PutChar(int c);
+void SHU_PutCharacter(int c);
 
 /// @brief Outputs a formatted string to the terminal. Uses printf-style formatting.
 /// @param format Format string.
@@ -576,7 +576,7 @@ void SHU_ClearTerminal(void)
     fflush(stdout);
 }
 
-void SHU_PutChar(int c)
+void SHU_PutCharacter(int c)
 {
     putchar(c);
 }
