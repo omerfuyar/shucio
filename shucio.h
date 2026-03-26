@@ -529,7 +529,7 @@ void SHU_GetCursorPosition(int *x, int *y)
     while (i < SHU_STRING_BUFFER_SIZE - 1)
     {
 #ifdef _WIN32
-        cursorPosBuffer[i] = _getch();
+        cursorPosBuffer[i] = (char)_getch();
 #else
         read(STDIN_FILENO, &cursorPosBuffer[i], 1);
 #endif
