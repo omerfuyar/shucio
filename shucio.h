@@ -15,7 +15,7 @@ typedef enum SHUKey
 
     SHUKey_Backspace = 8,
     SHUKey_Tab = 9,
-    SHUKey_Enter = 10,
+    SHUKey_Enter = 13,
     SHUKey_Escape = 27,
 
     SHUKey_Space = 32,
@@ -428,7 +428,7 @@ void SHU_Input(char *buffer, unsigned long long bufferSize)
 
         if (key == SHUKey_Enter)
         {
-            printf("\n");
+            // printf("\n");
             break;
         }
 
