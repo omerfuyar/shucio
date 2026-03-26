@@ -322,7 +322,7 @@ void SHU_Terminate(void)
     SHU_AT_EXIT_FUNCTION = NULL;
 
     SHU_SetCursorVisibility(1);
-    SHU_SetAttribute(SHUAttribute_Reset);
+    SHU_SetAttributes(SHUAttribute_Reset);
     SHU_SetTerminalAlternate(0);
 
 #ifdef _WIN32
@@ -590,6 +590,7 @@ void SHU_ClearTerminal(void)
 void SHU_PutCharacter(int c)
 {
     putchar(c);
+    fflush(stdout);
 }
 
 void SHU_PutString(const char *format, ...)
