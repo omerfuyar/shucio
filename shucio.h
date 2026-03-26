@@ -189,6 +189,7 @@ typedef enum SHUAttribute
 void SHU_Initialize(void);
 
 /// @brief Terminates the Shucio library and cleans up the settings.
+/// @note  It's called automatically on program exit, but you can also call it manually if you want to clean up before exiting. Disables alternate screen buffer, sets cursor visible, resets terminal attributes.
 void SHU_Terminate(void);
 
 /// @brief Get a blocking key input from user. Use with SHUKey enum.
@@ -308,6 +309,10 @@ void SHU_Initialize(void)
 void SHU_Terminate(void)
 {
     atexit(NULL);
+
+    SHU_SetCursorVisibility(1);
+    SHU_SetAttribute(SHUAttribute_Reset);
+    SHU_SetCursorVisibility(1);
 
 #ifdef _WIN32
     SetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE), SHU_CONSOLE_MODE_RESTORE);
