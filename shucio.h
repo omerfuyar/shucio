@@ -1,5 +1,11 @@
 #pragma once
-#define SHUCIO_IMPLEMENTATION
+
+#pragma region Shucio Macros
+
+#define SHU_SEQUENCE_BUFFER_SIZE 8
+#define SHU_STRING_BUFFER_SIZE 32
+
+#pragma endregion Shucio Macros
 
 #pragma region Shucio Declarations
 
@@ -134,11 +140,113 @@ typedef enum SHUKey
     // SHUKey_F12 = 276
 } SHUKey;
 
+typedef enum SHUAttribute
+{
+    SHUAttribute_Invalid = -1,
+    SHUAttribute_Reset = 0,
+
+    SHUAttribute_Bold = 1,
+    SHUAttribute_Underline = 4,
+    SHUAttribute_Blink = 5,
+    SHUAttribute_Reverse = 7,
+
+    SHUAttribute_BoldOff = 22,
+    SHUAttribute_UnderlineOff = 24,
+    SHUAttribute_BlinkOff = 25,
+    SHUAttribute_ReverseOff = 27,
+
+    SHUAttribute_ColorFGBlack = 30,
+    SHUAttribute_ColorFGRed = 31,
+    SHUAttribute_ColorFGGreen = 32,
+    SHUAttribute_ColorFGYellow = 33,
+    SHUAttribute_ColorFGBlue = 34,
+    SHUAttribute_ColorFGMagenta = 35,
+    SHUAttribute_ColorFGCyan = 36,
+    SHUAttribute_ColorFGWhite = 37,
+    SHUAttribute_ColorFGDefault = 39,
+
+    SHUAttribute_ColorBGBlack = 40,
+    SHUAttribute_ColorBGRed = 41,
+    SHUAttribute_ColorBGGreen = 42,
+    SHUAttribute_ColorBGYellow = 43,
+    SHUAttribute_ColorBGBlue = 44,
+    SHUAttribute_ColorBGMagenta = 45,
+    SHUAttribute_ColorBGCyan = 46,
+    SHUAttribute_ColorBGWhite = 47,
+    SHUAttribute_ColorBGDefault = 49,
+
+    SHUAttribute_Frame = 51,
+    SHUAttribute_Encircle = 52,
+    SHUAttribute_Overline = 53,
+
+    SHUAttribute_FrameEncircleOff = 54,
+    SHUAttribute_OverlineOff = 55,
+} SHUAttribute;
+
+// todo add attributes that not widely supported like rgb colors
+
+/// @brief Initializes the Shucio library. Must be called before any other function inside.
 void SHU_Initialize(void);
 
+/// @brief Terminates the Shucio library and cleans up the settings.
 void SHU_Terminate(void);
 
+/// @brief Get a blocking key input from user. Use with SHUKey enum.
+/// @return Entered key from user.
 SHUKey SHU_Key(void);
+
+/// @brief Gets a string input from the user on cursor place, echoes the characters to terminal.
+/// @param buffer Buffer to get user input string.
+/// @param bufferSize Size of the string buffer.
+/// @note Handles basic editing keys like backspace and enter. Sets cursor visibility to true, so dont forget to re-set it to your state. Also does not clean the echoed characters.
+void SHU_Input(char *buffer, unsigned long long bufferSize);
+
+/// @brief Moves the cursor by the specified amount in the x and y directions.
+/// @param x Amount to move cursor horizontally. Positive values move right, negative values move left.
+/// @param y Amount to move cursor vertically. Positive values move down, negative values move up.
+void SHU_MoveCursor(int x, int y);
+
+/// @brief Sets the cursor position to the specified coordinates. 0,0 is the top-left corner of the terminal.
+/// @param x X coordinate.
+/// @param y Y coordinate.
+void SHU_SetCursorPosition(int x, int y);
+
+/// @brief Sets the visibility of the cursor.
+/// @param visible 1 to show the cursor, 0 to hide it.
+void SHU_SetCursorVisibility(int visible);
+
+/// @brief Enters or exits the terminal's alternate screen buffer. Alternate screen buffer is a separate screen that can be used for full-screen applications, and when you exit it, the original screen content is restored.
+/// @param enable 1 to enter alternate screen buffer, 0 to exit it.
+void SHU_SetTerminalAlternate(int enable);
+
+///! This function is not meant to be used directly. Use SHU_SetAttributes macro instead.
+void SHU_SetAttribute(SHUAttribute attribute, ...);
+
+/// @brief Sets the specified set of attributes for text output.
+/// @param attributes Attributes to set. Must be used with SHUAttribute enum. You can also pass multiple attributes by using the variadic arguments.
+#define SHU_SetAttributes(...) SHU_SetAttribute(__VA_ARGS__, SHUAttribute_Invalid)
+
+/// @brief Gets the current cursor position and stores it in the provided x and y pointers. 0,0 is the top-left corner of the terminal.
+/// @param x Pointer to store the x coordinate of the cursor position.
+/// @param y Pointer to store the y coordinate of the cursor position.
+void SHU_GetCursorPosition(int *x, int *y);
+
+/// @brief Gets the current terminal size in characters and stores it in the provided width and height pointers.
+/// @param width Pointer to store the width of the terminal.
+/// @param height Pointer to store the height of the terminal.
+void SHU_GetTerminalSize(int *width, int *height);
+
+/// @brief Clears the entire terminal screen and moves the cursor to the top-left corner. Note that this does not clear the scrollback buffer, so users can still scroll up to see the previous content.
+void SHU_ClearTerminal(void);
+
+/// @brief Outputs a single character to the terminal.
+/// @param c Character to output.
+void SHU_PutChar(int c);
+
+/// @brief Outputs a formatted string to the terminal. Uses printf-style formatting.
+/// @param format Format string.
+/// @param args Arguments for the format string.
+void SHU_PutString(const char *format, ...);
 
 #pragma endregion Shucio Declarations
 
@@ -148,25 +256,46 @@ SHUKey SHU_Key(void);
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 
 #ifdef _WIN32
+#include <windows.h>
 #include <conio.h>
+
+static DWORD SHU_CONSOLE_MODE_RESTORE;
 #else
 #include <termios.h>
 #include <unistd.h>
+#include <sys/ioctl.h>
+
+static struct termios SHU_TERMIOS_RESTORE;
 #endif
 
-#ifndef _WIN32
-static struct termios SHU_TERMIOS_RESTOREZ;
-#endif
+#define SHU_Assert(condition, str, ...)                                                                               \
+    do                                                                                                                \
+    {                                                                                                                 \
+        if (!(condition))                                                                                             \
+        {                                                                                                             \
+            fprintf(stderr, "Assertion failed: %s, %s, %d : " str "\n", __FILE__, __func__, __LINE__, ##__VA_ARGS__); \
+            exit(EXIT_FAILURE);                                                                                       \
+        }                                                                                                             \
+    } while (0)
 
 void SHU_Initialize(void)
 {
-#ifndef _WIN32
-    tcgetattr(STDIN_FILENO, &SHU_TERMIOS_RESTOREZ);
     atexit(SHU_Terminate);
 
-    struct termios rawTermios = SHU_TERMIOS_RESTOREZ;
+#ifdef _WIN32
+    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    GetConsoleMode(hOut, &SHU_CONSOLE_MODE_RESTORE);
+
+    DWORD dwMode = SHU_CONSOLE_MODE_RESTORE;
+    dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+    SetConsoleMode(hOut, dwMode);
+#else
+    tcgetattr(STDIN_FILENO, &SHU_TERMIOS_RESTORE);
+
+    struct termios rawTermios = SHU_TERMIOS_RESTORE;
 
     rawTermios.c_lflag &= ~(ECHO | ICANON);
     rawTermios.c_cc[VMIN] = 1;
@@ -178,8 +307,12 @@ void SHU_Initialize(void)
 
 void SHU_Terminate(void)
 {
-#ifndef _WIN32
-    tcsetattr(STDIN_FILENO, TCSAFLUSH, &SHU_TERMIOS_RESTOREZ);
+    atexit(NULL);
+
+#ifdef _WIN32
+    SetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE), SHU_CONSOLE_MODE_RESTORE);
+#else
+    tcsetattr(STDIN_FILENO, TCSAFLUSH, &SHU_TERMIOS_RESTORE);
 #endif
 }
 
@@ -218,7 +351,7 @@ SHUKey SHU_Key(void)
 
     if (ch == (unsigned char)SHUKey_Escape) // '\x1b'
     {
-        unsigned char sequenceBuffer[8];
+        unsigned char sequenceBuffer[SHU_SEQUENCE_BUFFER_SIZE];
         unsigned char sequenceCount = 0;
 
         // Read the first character (usually '[' or 'O')
@@ -232,7 +365,7 @@ SHUKey SHU_Key(void)
 
         if (currentChar == '[' || currentChar == 'O')
         {
-            while (sequenceCount < sizeof(sequenceBuffer))
+            while (sequenceCount < SHU_SEQUENCE_BUFFER_SIZE)
             {
                 if (read(STDIN_FILENO, &sequenceBuffer[sequenceCount], 1) != 1)
                 {
@@ -273,6 +406,182 @@ SHUKey SHU_Key(void)
 
     return (SHUKey)ch;
 #endif
+}
+
+void SHU_Input(char *buffer, unsigned long long bufferSize)
+{
+    SHU_Assert(buffer != NULL, "Buffer cannot be NULL");
+    SHU_Assert(bufferSize > 0, "BufferSize must be greater than 0");
+
+    SHU_SetCursorVisibility(1);
+
+    unsigned long long index = 0;
+
+    while (1)
+    {
+        SHUKey key = SHU_Key();
+
+        if (key == SHUKey_Enter)
+        {
+            printf("\n");
+            break;
+        }
+
+        if (key == SHUKey_Backspace || key == SHUKey_Delete)
+        {
+            if (index > 0)
+            {
+                index--;
+                printf("\b \b");
+                fflush(stdout);
+            }
+        }
+
+        else if (key >= SHUKey_Space && key <= SHUKey_Tilde)
+        {
+            if (index < bufferSize - 1)
+            {
+                buffer[index++] = (char)key;
+
+                putchar((char)key);
+                fflush(stdout);
+            }
+        }
+    }
+
+    buffer[index] = '\0';
+}
+
+void SHU_MoveCursor(int x, int y)
+{
+    if (x > 0)
+    {
+        printf("\033[%dC", x);
+    }
+    else if (x < 0)
+    {
+        printf("\033[%dD", -x);
+    }
+
+    if (y > 0)
+    {
+        printf("\033[%dB", y);
+    }
+    else if (y < 0)
+    {
+        printf("\033[%dA", -y);
+    }
+
+    fflush(stdout);
+}
+
+void SHU_SetCursorPosition(int x, int y)
+{
+    printf("\033[%d;%dH", y + 1, x + 1);
+    fflush(stdout);
+}
+
+void SHU_SetCursorVisibility(int visible)
+{
+    printf(visible ? "\033[?25h" : "\033[?25l");
+    fflush(stdout);
+}
+
+void SHU_SetTerminalAlternate(int enable)
+{
+    printf(enable ? "\033[?1049h" : "\033[?1049l");
+    fflush(stdout);
+}
+
+void SHU_SetAttribute(SHUAttribute attribute, ...)
+{
+    printf("\033[%dm", (int)attribute);
+
+    va_list args;
+    va_start(args, attribute);
+
+    int next_attr = -1;
+    while ((next_attr = va_arg(args, int)) != -1)
+    {
+        printf("\033[%dm", next_attr);
+    }
+
+    va_end(args);
+}
+
+void SHU_GetCursorPosition(int *x, int *y)
+{
+    SHU_Assert(x != NULL && y != NULL, "x and y pointers cannot be NULL");
+
+    printf("\033[6n");
+    fflush(stdout);
+
+    // ESC [ row ; col R
+    int row = 0, col = 0;
+
+    char cursorPosBuffer[SHU_STRING_BUFFER_SIZE] = {0};
+    unsigned int i = 0;
+    while (i < SHU_STRING_BUFFER_SIZE - 1)
+    {
+#ifdef _WIN32
+        cursorPosBuffer[i] = _getch();
+#else
+        read(STDIN_FILENO, &cursorPosBuffer[i], 1);
+#endif
+
+        if (cursorPosBuffer[i] == 'R')
+        {
+            break;
+        }
+
+        i++;
+    }
+
+    cursorPosBuffer[i] = '\0';
+
+    SHU_Assert(cursorPosBuffer[0] == '\x1b' && cursorPosBuffer[1] == '[', "Failed to parse cursor position response");
+    SHU_Assert(sscanf(cursorPosBuffer + 2, "%d;%d", &row, &col) == 2, "Failed to parse cursor position response");
+
+    *x = col - 1;
+    *y = row - 1;
+}
+
+void SHU_GetTerminalSize(int *width, int *height)
+{
+    SHU_Assert(width != NULL && height != NULL, "width and height pointers cannot be NULL");
+
+#ifdef _WIN32
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
+
+    *width = csbi.srWindow.Right - csbi.srWindow.Left + 1;
+    *height = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
+#else
+    struct winsize w;
+    ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+
+    *width = w.ws_col;
+    *height = w.ws_row;
+#endif
+}
+
+void SHU_ClearTerminal(void)
+{
+    printf("\033[2J\033[H");
+    fflush(stdout);
+}
+
+void SHU_PutChar(int c)
+{
+    putchar(c);
+}
+
+void SHU_PutString(const char *format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    vprintf(format, args);
+    va_end(args);
 }
 
 #endif
