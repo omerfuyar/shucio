@@ -282,14 +282,14 @@ static void SHU_AT_EXIT(void)
     }
 }
 
-#define SHU_Assert(condition, str, ...)                                                                               \
-    do                                                                                                                \
-    {                                                                                                                 \
-        if (!(condition))                                                                                             \
-        {                                                                                                             \
-            fprintf(stderr, "Assertion failed: %s, %s, %d : " str "\n", __FILE__, __func__, __LINE__, ##__VA_ARGS__); \
-            exit(EXIT_FAILURE);                                                                                       \
-        }                                                                                                             \
+#define SHU_Assert(condition, str, ...)                                                                             \
+    do                                                                                                              \
+    {                                                                                                               \
+        if (!(condition))                                                                                           \
+        {                                                                                                           \
+            fprintf(stderr, "Assertion failed: %s, %s, %d : " str "\n", __FILE__, __func__, __LINE__, __VA_ARGS__); \
+            exit(EXIT_FAILURE);                                                                                     \
+        }                                                                                                           \
     } while (0)
 
 void SHU_Initialize(void)
