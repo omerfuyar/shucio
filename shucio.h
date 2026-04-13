@@ -140,21 +140,65 @@ typedef enum SHUKey
     // SHUKey_F12 = 276
 } SHUKey;
 
+// Select alternate font n-10
+#define SHUAttribute_AlternateFont(n) (10 + (n)) // n is between 1 and 9
+
+/*
+Set foreground color from one of 256 pre-selected colors. Not widely supported. n is between 0 and 255.
+0x00-0x07	standard colors (same as the 4-bit colors)
+0x08-0x0F	high intensity colors
+0x10-0xE7	6 × 6 × 6 cube (216 colors): 16 + 36 × r + 6 × g + b (0 ≤ r, g, b ≤ 5)
+0xE8-0xFF	grayscale from black to white in 24 steps
+*/
+#define SHUAttribute_ColorFG8(n) ((unsigned int)38 << 8 | (unsigned int)(n))
+
+/*
+Set background color from one of 256 pre-selected colors. Not widely supported. n is between 0 and 255.
+0x00-0x07	standard colors (same as the 4-bit colors)
+0x08-0x0F	high intensity colors
+0x10-0xE7	6 × 6 × 6 cube (216 colors): 16 + 36 × r + 6 × g + b (0 ≤ r, g, b ≤ 5)
+0xE8-0xFF	grayscale from black to white in 24 steps
+*/
+#define SHUAttribute_ColorBG8(n) ((unsigned int)48 << 8 | (unsigned int)(n))
+
+#define SHU_COLOR_8BIT_START (SHUAttribute_ColorFG8(0))
+#define SHU_COLOR_8BIT_END (SHUAttribute_ColorBG8(255))
+
+// Set RGB foreground color. Not widely supported. r, g, b are between 0 and 255.
+#define SHUAttribute_ColorFG24(r, g, b) ((unsigned int)38 << 24 | (unsigned int)(r) << 16 | (unsigned int)(g) << 8 | (unsigned int)(b))
+// Set RGB background color. Not widely supported. r, g, b are between 0 and 255.
+#define SHUAttribute_ColorBG24(r, g, b) ((unsigned int)48 << 24 | (unsigned int)(r) << 16 | (unsigned int)(g) << 8 | (unsigned int)(b))
+
+#define SHU_COLOR_24BIT_START (SHUAttribute_ColorFG24(0, 0, 0))
+#define SHU_COLOR_24BIT_END (SHUAttribute_ColorBG24(255, 255, 255))
+
 typedef enum SHUAttribute
 {
-    SHUAttribute_Invalid = -1,
-    SHUAttribute_Reset = 0,
+    SHUAttribute_Reset = 0, // all attributes off
 
-    SHUAttribute_Bold = 1,
+    SHUAttribute_Bold = 1,   // Bold or increased intensity
+    SHUAttribute_Faint = 2,  // Not widely supported.
+    SHUAttribute_Italic = 3, // Not widely supported. Sometimes treated as inverse.
     SHUAttribute_Underline = 4,
-    SHUAttribute_Blink = 5,
-    SHUAttribute_Reverse = 7,
+    SHUAttribute_SlowBlink = 5,  // less than 150 per minute
+    SHUAttribute_RapidBlink = 6, // MS-DOS ANSI.SYS; 150+ per minute; not widely supported
+    SHUAttribute_Reverse = 7,    // swap foreground and background colors
+    SHUAttribute_Conceal = 8,    // Not widely supported.
+    SHUAttribute_CrossedOut = 9, // Characters legible, but marked for deletion. Not widely supported.
 
-    SHUAttribute_BoldOff = 22,
-    SHUAttribute_UnderlineOff = 24,
+    SHUAttribute_PrimaryFont = 10,
+
+    SHUAttribute_Fraktur = 20,     // hardly ever supported
+    SHUAttribute_BoldOff = 21,     // Bold off or Double Underline
+    SHUAttribute_NormalColor = 22, // Neither bold nor faint
+    SHUAttribute_NotItalicNotFraktur = 23,
+    SHUAttribute_UnderlineOff = 24, // Not singly or doubly underlined
     SHUAttribute_BlinkOff = 25,
-    SHUAttribute_ReverseOff = 27,
+    SHUAttribute_InverseOff = 27,
+    SHUAttribute_Reveal = 28, // conceal off
+    SHUAttribute_NotCrossedOut = 29,
 
+    // Set foreground color
     SHUAttribute_ColorFGBlack = 30,
     SHUAttribute_ColorFGRed = 31,
     SHUAttribute_ColorFGGreen = 32,
@@ -163,8 +207,9 @@ typedef enum SHUAttribute
     SHUAttribute_ColorFGMagenta = 35,
     SHUAttribute_ColorFGCyan = 36,
     SHUAttribute_ColorFGWhite = 37,
-    SHUAttribute_ColorFGDefault = 39,
+    SHUAttribute_ColorFGDefault = 39, // implementation defined (according to standard)
 
+    // Set background color
     SHUAttribute_ColorBGBlack = 40,
     SHUAttribute_ColorBGRed = 41,
     SHUAttribute_ColorBGGreen = 42,
@@ -173,17 +218,43 @@ typedef enum SHUAttribute
     SHUAttribute_ColorBGMagenta = 45,
     SHUAttribute_ColorBGCyan = 46,
     SHUAttribute_ColorBGWhite = 47,
-    SHUAttribute_ColorBGDefault = 49,
+    SHUAttribute_ColorBGDefault = 49, // implementation defined (according to standard)
 
-    SHUAttribute_Frame = 51,
-    SHUAttribute_Encircle = 52,
-    SHUAttribute_Overline = 53,
+    SHUAttribute_Framed = 51,
+    SHUAttribute_Encircled = 52,
+    SHUAttribute_Overlined = 53,
+    SHUAttribute_NotFramedOrEncircled = 54,
+    SHUAttribute_NotOverlined = 55,
 
-    SHUAttribute_FrameEncircleOff = 54,
-    SHUAttribute_OverlineOff = 55,
+    SHUAttribute_IdeogramUnderline = 60,       // hardly ever supported
+    SHUAttribute_IdeogramDoubleUnderline = 61, // hardly ever supported
+    SHUAttribute_IdeogramOverline = 62,        // hardly ever supported
+    SHUAttribute_IdeogramDoubleOverline = 63,  // hardly ever supported
+    SHUAttribute_IdeogramStressMarking = 64,   // hardly ever supported
+    SHUAttribute_IdeogramAttributesOff = 65,   // reset the effects of all of 60-64
+
+    // Set bright foreground color. aixterm (not in standard)
+    SHUAttribute_ColorBrightFGBlack = 90,
+    SHUAttribute_ColorBrightFGRed = 91,
+    SHUAttribute_ColorBrightFGGreen = 92,
+    SHUAttribute_ColorBrightFGYellow = 93,
+    SHUAttribute_ColorBrightFGBlue = 94,
+    SHUAttribute_ColorBrightFGMagenta = 95,
+    SHUAttribute_ColorBrightFGCyan = 96,
+    SHUAttribute_ColorBrightFGWhite = 97,
+
+    // Set bright background color. aixterm (not in standard)
+    SHUAttribute_ColorBrightBGBlack = 100,
+    SHUAttribute_ColorBrightBGRed = 101,
+    SHUAttribute_ColorBrightBGGreen = 102,
+    SHUAttribute_ColorBrightBGYellow = 103,
+    SHUAttribute_ColorBrightBGBlue = 104,
+    SHUAttribute_ColorBrightBGMagenta = 105,
+    SHUAttribute_ColorBrightBGCyan = 106,
+    SHUAttribute_ColorBrightBGWhite = 107,
+
+    SHUAttribute_Invalid, //!!! not meant for use !!!
 } SHUAttribute;
-
-// todo add attributes that not widely supported like rgb colors
 
 /// @brief Initializes the Shucio library. Must be called before any other function inside.
 void SHU_Initialize(void);
@@ -220,12 +291,12 @@ void SHU_SetCursorVisibility(int visible);
 /// @param enable 1 to enter alternate screen buffer, 0 to exit it.
 void SHU_SetTerminalAlternate(int enable);
 
-///! This function is not meant to be used directly. Use SHU_SetAttributes macro instead.
+///!!! This function is not meant to be used directly. Use SHU_SetAttributes macro instead. !!!
 void SHU_SetAttribute(SHUAttribute attribute, ...);
 
 /// @brief Sets the specified set of attributes for text output.
 /// @param attributes Attributes to set. Must be used with SHUAttribute enum. You can also pass multiple attributes by using the variadic arguments.
-#define SHU_SetAttributes(...) SHU_SetAttribute(__VA_ARGS__, SHUAttribute_Invalid)
+#define SHU_SetAttributes(attribute, ...) SHU_SetAttribute(attribute, ##__VA_ARGS__, SHUAttribute_Invalid)
 
 /// @brief Gets the current cursor position and stores it in the provided x and y pointers. 0,0 is the top-left corner of the terminal.
 /// @param x Pointer to store the x coordinate of the cursor position.
@@ -247,7 +318,10 @@ void SHU_PutCharacter(int c);
 /// @brief Outputs a formatted string to the terminal. Uses printf-style formatting.
 /// @param format Format string.
 /// @param args Arguments for the format string.
-void SHU_PutString(const char *format, ...);
+int SHU_PutString(const char *format, ...);
+
+/// @brief Flushes the output buffer so anything that was buffered will be written to the terminal immediately.
+void SHU_Flush(void);
 
 #pragma endregion Shucio Declarations
 
@@ -511,15 +585,38 @@ void SHU_SetTerminalAlternate(int enable)
 
 void SHU_SetAttribute(SHUAttribute attribute, ...)
 {
-    printf("\033[%dm", (int)attribute);
-
     va_list args;
     va_start(args, attribute);
 
-    int next_attr = -1;
-    while ((next_attr = va_arg(args, int)) != -1)
+    unsigned int nextAttribute = attribute;
+    while (nextAttribute != SHUAttribute_Invalid)
     {
-        printf("\033[%dm", next_attr);
+        if (nextAttribute < SHUAttribute_Invalid)
+        {
+            printf("\033[%dm", nextAttribute);
+        }
+        else if (nextAttribute >= SHU_COLOR_8BIT_START && nextAttribute <= SHU_COLOR_8BIT_END)
+        {
+            unsigned char colorType = (unsigned char)((nextAttribute >> 8) & 0xFF);
+            unsigned char colorValue = (unsigned char)(nextAttribute & 0xFF);
+            printf("\033[%d;5;%dm", colorType, colorValue);
+            printf("%d;5;%d\n", colorType, colorValue);
+        }
+        else if (nextAttribute >= SHU_COLOR_24BIT_START && nextAttribute <= SHU_COLOR_24BIT_END)
+        {
+            unsigned char colorType = (unsigned char)((nextAttribute >> 24) & 0xFF);
+            unsigned char colorR = (unsigned char)((nextAttribute >> 16) & 0xFF);
+            unsigned char colorG = (unsigned char)((nextAttribute >> 8) & 0xFF);
+            unsigned char colorB = (unsigned char)(nextAttribute & 0xFF);
+            printf("\033[%d;2;%d;%d;%dm", colorType, colorR, colorG, colorB);
+            printf("%d;2;%d;%d;%d\n", colorType, colorR, colorG, colorB);
+        }
+        else
+        {
+            SHU_Assert(0, "Invalid attribute: %d", nextAttribute);
+        }
+
+        nextAttribute = va_arg(args, unsigned int);
     }
 
     va_end(args);
@@ -593,12 +690,19 @@ void SHU_PutCharacter(int c)
     fflush(stdout);
 }
 
-void SHU_PutString(const char *format, ...)
+int SHU_PutString(const char *format, ...)
 {
     va_list args;
     va_start(args, format);
-    vprintf(format, args);
+    int result = vprintf(format, args);
     va_end(args);
+
+    return result;
+}
+
+void SHU_Flush(void)
+{
+    fflush(stdout);
 }
 
 #endif
