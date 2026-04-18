@@ -15,7 +15,7 @@ typedef enum SHUKey
 
     SHUKey_Backspace = 8,
     SHUKey_Tab = 9,
-    SHUKey_Enter = 13,
+    SHUKey_Enter = 10,
     SHUKey_Escape = 27,
 
     SHUKey_Space = 32,
