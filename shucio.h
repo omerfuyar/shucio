@@ -600,7 +600,6 @@ void SHU_SetAttribute(SHUAttribute attribute, ...)
             unsigned char colorType = (unsigned char)((nextAttribute >> 8) & 0xFF);
             unsigned char colorValue = (unsigned char)(nextAttribute & 0xFF);
             printf("\033[%d;5;%dm", colorType, colorValue);
-            printf("%d;5;%d\n", colorType, colorValue);
         }
         else if (nextAttribute >= SHU_COLOR_24BIT_START && nextAttribute <= SHU_COLOR_24BIT_END)
         {
@@ -609,7 +608,6 @@ void SHU_SetAttribute(SHUAttribute attribute, ...)
             unsigned char colorG = (unsigned char)((nextAttribute >> 8) & 0xFF);
             unsigned char colorB = (unsigned char)(nextAttribute & 0xFF);
             printf("\033[%d;2;%d;%d;%dm", colorType, colorR, colorG, colorB);
-            printf("%d;2;%d;%d;%d\n", colorType, colorR, colorG, colorB);
         }
         else
         {
