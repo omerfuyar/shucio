@@ -11,7 +11,7 @@
 
 typedef enum SHUKey
 {
-    SHUKey_Invalid = -1,
+    SHUKey_Invalid = 0,
 
     SHUKey_Backspace = 8,
     SHUKey_Tab = 9,
