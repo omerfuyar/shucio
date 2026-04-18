@@ -337,26 +337,26 @@ void SHU_Flush(void);
 #include <windows.h>
 #include <conio.h>
 
-static DWORD SHU_CONSOLE_MODE_RESTORE;
+static DWORD SHUI_CONSOLE_MODE_RESTORE;
 #else
 #include <termios.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
 
-static struct termios SHU_TERMIOS_RESTORE;
+static struct termios SHUI_TERMIOS_RESTORE;
 #endif
 
-void (*SHU_AT_EXIT_FUNCTION)(void) = NULL;
+void (*SHUI_AT_EXIT_FUNCTION)(void) = NULL;
 
-static void SHU_AT_EXIT(void)
+static void SHUI_AT_EXIT(void)
 {
-    if (SHU_AT_EXIT_FUNCTION != NULL)
+    if (SHUI_AT_EXIT_FUNCTION != NULL)
     {
-        SHU_AT_EXIT_FUNCTION();
+        SHUI_AT_EXIT_FUNCTION();
     }
 }
 
-#define SHU_Assert(condition, str, ...)                                                                               \
+#define SHUI_Assert(condition, str, ...)                                                                              \
     do                                                                                                                \
     {                                                                                                                 \
         if (!(condition))                                                                                             \
@@ -368,20 +368,20 @@ static void SHU_AT_EXIT(void)
 
 void SHU_Initialize(void)
 {
-    SHU_AT_EXIT_FUNCTION = SHU_Terminate;
-    atexit(SHU_AT_EXIT);
+    SHUI_AT_EXIT_FUNCTION = SHU_Terminate;
+    atexit(SHUI_AT_EXIT);
 
 #ifdef _WIN32
     HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-    GetConsoleMode(hOut, &SHU_CONSOLE_MODE_RESTORE);
+    GetConsoleMode(hOut, &SHUI_CONSOLE_MODE_RESTORE);
 
-    DWORD dwMode = SHU_CONSOLE_MODE_RESTORE;
+    DWORD dwMode = SHUI_CONSOLE_MODE_RESTORE;
     dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
     SetConsoleMode(hOut, dwMode);
 #else
-    tcgetattr(STDIN_FILENO, &SHU_TERMIOS_RESTORE);
+    tcgetattr(STDIN_FILENO, &SHUI_TERMIOS_RESTORE);
 
-    struct termios rawTermios = SHU_TERMIOS_RESTORE;
+    struct termios rawTermios = SHUI_TERMIOS_RESTORE;
 
     rawTermios.c_lflag &= ~((tcflag_t)ECHO | (tcflag_t)ICANON);
     rawTermios.c_cc[VMIN] = 1;
@@ -393,16 +393,16 @@ void SHU_Initialize(void)
 
 void SHU_Terminate(void)
 {
-    SHU_AT_EXIT_FUNCTION = NULL;
+    SHUI_AT_EXIT_FUNCTION = NULL;
 
     SHU_SetCursorVisibility(1);
     SHU_SetAttributes(SHUAttribute_Reset);
     SHU_SetTerminalAlternate(0);
 
 #ifdef _WIN32
-    SetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE), SHU_CONSOLE_MODE_RESTORE);
+    SetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE), SHUI_CONSOLE_MODE_RESTORE);
 #else
-    tcsetattr(STDIN_FILENO, TCSAFLUSH, &SHU_TERMIOS_RESTORE);
+    tcsetattr(STDIN_FILENO, TCSAFLUSH, &SHUI_TERMIOS_RESTORE);
 #endif
 }
 
@@ -500,8 +500,8 @@ SHUKey SHU_Key(void)
 
 void SHU_Input(char *buffer, unsigned long long bufferSize)
 {
-    SHU_Assert(buffer != NULL, "Buffer cannot be NULL");
-    SHU_Assert(bufferSize > 0, "BufferSize must be greater than 0");
+    SHUI_Assert(buffer != NULL, "Buffer cannot be NULL");
+    SHUI_Assert(bufferSize > 0, "BufferSize must be greater than 0");
 
     SHU_SetCursorVisibility(1);
 
@@ -613,7 +613,7 @@ void SHU_SetAttribute(SHUAttribute attribute, ...)
         }
         else
         {
-            SHU_Assert(0, "Invalid attribute: %d", nextAttribute);
+            SHUI_Assert(0, "Invalid attribute: %d", nextAttribute);
         }
 
         nextAttribute = va_arg(args, unsigned int);
@@ -624,7 +624,7 @@ void SHU_SetAttribute(SHUAttribute attribute, ...)
 
 void SHU_GetCursorPosition(int *x, int *y)
 {
-    SHU_Assert(x != NULL && y != NULL, "x and y pointers cannot be NULL");
+    SHUI_Assert(x != NULL && y != NULL, "x and y pointers cannot be NULL");
 
     printf("\033[6n");
     fflush(stdout);
@@ -652,8 +652,8 @@ void SHU_GetCursorPosition(int *x, int *y)
 
     cursorPosBuffer[i] = '\0';
 
-    SHU_Assert(cursorPosBuffer[0] == '\x1b' && cursorPosBuffer[1] == '[', "Failed to parse cursor position response");
-    SHU_Assert(sscanf(cursorPosBuffer + 2, "%d;%d", &row, &col) == 2, "Failed to parse cursor position response");
+    SHUI_Assert(cursorPosBuffer[0] == '\x1b' && cursorPosBuffer[1] == '[', "Failed to parse cursor position response");
+    SHUI_Assert(sscanf(cursorPosBuffer + 2, "%d;%d", &row, &col) == 2, "Failed to parse cursor position response");
 
     *x = col - 1;
     *y = row - 1;
@@ -661,7 +661,7 @@ void SHU_GetCursorPosition(int *x, int *y)
 
 void SHU_GetTerminalSize(int *width, int *height)
 {
-    SHU_Assert(width != NULL && height != NULL, "width and height pointers cannot be NULL");
+    SHUI_Assert(width != NULL && height != NULL, "width and height pointers cannot be NULL");
 
 #ifdef _WIN32
     CONSOLE_SCREEN_BUFFER_INFO csbi;
