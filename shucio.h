@@ -140,38 +140,6 @@ typedef enum SHUKey
     // SHUKey_F12 = 276
 } SHUKey;
 
-// Select alternate font n-10
-#define SHUAttribute_AlternateFont(n) (10 + (n)) // n is between 1 and 9
-
-/*
-Set foreground color from one of 256 pre-selected colors. Not widely supported. n is between 0 and 255.
-0x00-0x07	standard colors (same as the 4-bit colors)
-0x08-0x0F	high intensity colors
-0x10-0xE7	6 × 6 × 6 cube (216 colors): 16 + 36 × r + 6 × g + b (0 ≤ r, g, b ≤ 5)
-0xE8-0xFF	grayscale from black to white in 24 steps
-*/
-#define SHUAttribute_ColorFG8(n) ((unsigned int)38 << 8 | (unsigned int)(n))
-
-/*
-Set background color from one of 256 pre-selected colors. Not widely supported. n is between 0 and 255.
-0x00-0x07	standard colors (same as the 4-bit colors)
-0x08-0x0F	high intensity colors
-0x10-0xE7	6 × 6 × 6 cube (216 colors): 16 + 36 × r + 6 × g + b (0 ≤ r, g, b ≤ 5)
-0xE8-0xFF	grayscale from black to white in 24 steps
-*/
-#define SHUAttribute_ColorBG8(n) ((unsigned int)48 << 8 | (unsigned int)(n))
-
-#define SHU_COLOR_8BIT_START (SHUAttribute_ColorFG8(0))
-#define SHU_COLOR_8BIT_END (SHUAttribute_ColorBG8(255))
-
-// Set RGB foreground color. Not widely supported. r, g, b are between 0 and 255.
-#define SHUAttribute_ColorFG24(r, g, b) ((unsigned int)38 << 24 | (unsigned int)(r) << 16 | (unsigned int)(g) << 8 | (unsigned int)(b))
-// Set RGB background color. Not widely supported. r, g, b are between 0 and 255.
-#define SHUAttribute_ColorBG24(r, g, b) ((unsigned int)48 << 24 | (unsigned int)(r) << 16 | (unsigned int)(g) << 8 | (unsigned int)(b))
-
-#define SHU_COLOR_24BIT_START (SHUAttribute_ColorFG24(0, 0, 0))
-#define SHU_COLOR_24BIT_END (SHUAttribute_ColorBG24(255, 255, 255))
-
 typedef enum SHUAttribute
 {
     SHUAttribute_Reset = 0, // all attributes off
@@ -255,6 +223,38 @@ typedef enum SHUAttribute
 
     SHUAttribute_Invalid, //!!! not meant for use !!!
 } SHUAttribute;
+
+// Select alternate font n-10
+#define SHUAttribute_AlternateFont(n) (10 + (n)) // n is between 1 and 9
+
+/*
+Set foreground color from one of 256 pre-selected colors. Not widely supported. n is between 0 and 255.
+0x00-0x07	standard colors (same as the 4-bit colors)
+0x08-0x0F	high intensity colors
+0x10-0xE7	6 × 6 × 6 cube (216 colors): 16 + 36 × r + 6 × g + b (0 ≤ r, g, b ≤ 5)
+0xE8-0xFF	grayscale from black to white in 24 steps
+*/
+#define SHUAttribute_ColorFG8(n) ((unsigned int)38 << 8 | (unsigned int)(n))
+
+/*
+Set background color from one of 256 pre-selected colors. Not widely supported. n is between 0 and 255.
+0x00-0x07	standard colors (same as the 4-bit colors)
+0x08-0x0F	high intensity colors
+0x10-0xE7	6 × 6 × 6 cube (216 colors): 16 + 36 × r + 6 × g + b (0 ≤ r, g, b ≤ 5)
+0xE8-0xFF	grayscale from black to white in 24 steps
+*/
+#define SHUAttribute_ColorBG8(n) ((unsigned int)48 << 8 | (unsigned int)(n))
+
+#define SHU_COLOR_8BIT_START (SHUAttribute_ColorFG8(0))
+#define SHU_COLOR_8BIT_END (SHUAttribute_ColorBG8(255))
+
+// Set RGB foreground color. Not widely supported. r, g, b are between 0 and 255.
+#define SHUAttribute_ColorFG24(r, g, b) ((unsigned int)38 << 24 | (unsigned int)(r) << 16 | (unsigned int)(g) << 8 | (unsigned int)(b))
+// Set RGB background color. Not widely supported. r, g, b are between 0 and 255.
+#define SHUAttribute_ColorBG24(r, g, b) ((unsigned int)48 << 24 | (unsigned int)(r) << 16 | (unsigned int)(g) << 8 | (unsigned int)(b))
+
+#define SHU_COLOR_24BIT_START (SHUAttribute_ColorFG24(0, 0, 0))
+#define SHU_COLOR_24BIT_END (SHUAttribute_ColorBG24(255, 255, 255))
 
 /// @brief Initializes the Shucio library. Must be called before any other function inside.
 void SHU_Initialize(void);
