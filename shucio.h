@@ -257,11 +257,11 @@ Set background color from one of 256 pre-selected colors. Not widely supported. 
 #define SHU_COLOR_24BIT_END (SHUAttribute_ColorBG24(255, 255, 255))
 
 /// @brief Initializes the Shucio library. Must be called before any other function inside.
-void SHU_Initialize(void);
+void SHU_InitializeConsole(void);
 
 /// @brief Terminates the Shucio library and cleans up the settings.
 /// @note  It's called automatically on program exit, but you can also call it manually if you want to clean up before exiting. Disables alternate screen buffer, sets cursor visible, resets terminal attributes.
-void SHU_Terminate(void);
+void SHU_TerminateConsole(void);
 
 /// @brief Get a blocking key input from user. Use with SHUKey enum.
 /// @return Entered key from user.
@@ -366,9 +366,9 @@ static void SHUI_AT_EXIT(void)
         }                                                                                                             \
     } while (0)
 
-void SHU_Initialize(void)
+void SHU_InitializeConsole(void)
 {
-    SHUI_AT_EXIT_FUNCTION = SHU_Terminate;
+    SHUI_AT_EXIT_FUNCTION = SHU_TerminateConsole;
     atexit(SHUI_AT_EXIT);
 
 #ifdef _WIN32
@@ -391,7 +391,7 @@ void SHU_Initialize(void)
 #endif
 }
 
-void SHU_Terminate(void)
+void SHU_TerminateConsole(void)
 {
     SHUI_AT_EXIT_FUNCTION = NULL;
 
