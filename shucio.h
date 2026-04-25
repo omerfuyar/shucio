@@ -265,63 +265,63 @@ void SHU_TerminateConsole(void);
 
 /// @brief Get a blocking key input from user. Use with SHUKey enum.
 /// @return Entered key from user.
-SHUKey SHU_Key(void);
+SHUKey SHU_InputKey(void);
 
 /// @brief Gets a string input from the user on cursor place, echoes the characters to terminal.
 /// @param buffer Buffer to get user input string.
 /// @param bufferSize Size of the string buffer.
 /// @note Handles basic editing keys like backspace and enter. Sets cursor visibility to true, so dont forget to re-set it to your state. Also does not clean the echoed characters.
-void SHU_Input(char *buffer, unsigned long long bufferSize);
+void SHU_InputString(char *buffer, unsigned long long bufferSize);
 
 /// @brief Moves the cursor by the specified amount in the x and y directions.
 /// @param x Amount to move cursor horizontally. Positive values move right, negative values move left.
 /// @param y Amount to move cursor vertically. Positive values move down, negative values move up.
-void SHU_MoveCursor(int x, int y);
-
-/// @brief Sets the cursor position to the specified coordinates. 0,0 is the top-left corner of the terminal.
-/// @param x X coordinate.
-/// @param y Y coordinate.
-void SHU_SetCursorPosition(int x, int y);
-
-/// @brief Sets the visibility of the cursor.
-/// @param visible 1 to show the cursor, 0 to hide it.
-void SHU_SetCursorVisibility(int visible);
-
-/// @brief Enters or exits the terminal's alternate screen buffer. Alternate screen buffer is a separate screen that can be used for full-screen applications, and when you exit it, the original screen content is restored.
-/// @param enable 1 to enter alternate screen buffer, 0 to exit it.
-void SHU_SetTerminalAlternate(int enable);
-
-///!!! This function is not meant to be used directly. Use SHU_SetAttributes macro instead. !!!
-void SHU_SetAttribute(SHUAttribute attribute, ...);
-
-/// @brief Sets the specified set of attributes for text output.
-/// @param attributes Attributes to set. Must be used with SHUAttribute enum. You can also pass multiple attributes by using the variadic arguments.
-#define SHU_SetAttributes(attribute, ...) SHU_SetAttribute(attribute, ##__VA_ARGS__, SHUAttribute_Invalid)
+void SHU_CursorMove(int x, int y);
 
 /// @brief Gets the current cursor position and stores it in the provided x and y pointers. 0,0 is the top-left corner of the terminal.
 /// @param x Pointer to store the x coordinate of the cursor position.
 /// @param y Pointer to store the y coordinate of the cursor position.
-void SHU_GetCursorPosition(int *x, int *y);
+void SHU_CursorGetPosition(int *x, int *y);
+
+/// @brief Sets the cursor position to the specified coordinates. 0,0 is the top-left corner of the terminal.
+/// @param x X coordinate.
+/// @param y Y coordinate.
+void SHU_CursorSetPosition(int x, int y);
+
+/// @brief Sets the visibility of the cursor.
+/// @param visible 1 to show the cursor, 0 to hide it.
+void SHU_CursorSetVisibility(int visible);
 
 /// @brief Gets the current terminal size in characters and stores it in the provided width and height pointers.
 /// @param width Pointer to store the width of the terminal.
 /// @param height Pointer to store the height of the terminal.
-void SHU_GetTerminalSize(int *width, int *height);
+void SHU_TerminalGetSize(int *width, int *height);
+
+/// @brief Enters or exits the terminal's alternate screen buffer. Alternate screen buffer is a separate screen that can be used for full-screen applications, and when you exit it, the original screen content is restored.
+/// @param enable 1 to enter alternate screen buffer, 0 to exit it.
+void SHU_TerminalSetAlternate(int enable);
+
+/// !!! This function is not meant to be used directly. Use SHU_TerminalSetAttributes macro instead. !!!
+void SHUI_TerminalSetAttributes(SHUAttribute attribute, ...);
+
+/// @brief Sets the specified set of attributes for text output.
+/// @param attributes Attributes to set. Must be used with SHUAttribute enum. You can also pass multiple attributes by using the variadic arguments.
+#define SHU_TerminalSetAttributes(attribute, ...) SHUI_TerminalSetAttributes(attribute, ##__VA_ARGS__, SHUAttribute_Invalid)
 
 /// @brief Clears the entire terminal screen and moves the cursor to the top-left corner. Note that this does not clear the scrollback buffer, so users can still scroll up to see the previous content.
-void SHU_ClearTerminal(void);
+void SHU_TerminalClear(void);
 
 /// @brief Outputs a single character to the terminal.
 /// @param c Character to output.
-void SHU_PutCharacter(int c);
+void SHU_TerminalPutCharacter(int c);
 
 /// @brief Outputs a formatted string to the terminal. Uses printf-style formatting.
 /// @param format Format string.
 /// @param args Arguments for the format string.
-int SHU_PutString(const char *format, ...);
+int SHU_TerminalPutString(const char *format, ...);
 
 /// @brief Flushes the output buffer so anything that was buffered will be written to the terminal immediately.
-void SHU_Flush(void);
+void SHU_TerminalFlush(void);
 
 #pragma endregion Shucio Declarations
 
@@ -395,9 +395,9 @@ void SHU_TerminateConsole(void)
 {
     SHUI_AT_EXIT_FUNCTION = NULL;
 
-    SHU_SetCursorVisibility(1);
-    SHU_SetAttributes(SHUAttribute_Reset);
-    SHU_SetTerminalAlternate(0);
+    SHU_CursorSetVisibility(1);
+    SHU_TerminalSetAttributes(SHUAttribute_Reset);
+    SHU_TerminalSetAlternate(0);
 
 #ifdef _WIN32
     SetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE), SHUI_CONSOLE_MODE_RESTORE);
@@ -406,7 +406,7 @@ void SHU_TerminateConsole(void)
 #endif
 }
 
-SHUKey SHU_Key(void)
+SHUKey SHU_InputKey(void)
 {
 #ifdef _WIN32
     int ch = _getch();
@@ -498,18 +498,18 @@ SHUKey SHU_Key(void)
 #endif
 }
 
-void SHU_Input(char *buffer, unsigned long long bufferSize)
+void SHU_InputString(char *buffer, unsigned long long bufferSize)
 {
     SHUI_Assert(buffer != NULL, "Buffer cannot be NULL");
     SHUI_Assert(bufferSize > 0, "BufferSize must be greater than 0");
 
-    SHU_SetCursorVisibility(1);
+    SHU_CursorSetVisibility(1);
 
     unsigned long long index = 0;
 
     while (1)
     {
-        SHUKey key = SHU_Key();
+        SHUKey key = SHU_InputKey();
 
         if (key == SHUKey_Enter)
         {
@@ -542,7 +542,7 @@ void SHU_Input(char *buffer, unsigned long long bufferSize)
     buffer[index] = '\0';
 }
 
-void SHU_MoveCursor(int x, int y)
+void SHU_CursorMove(int x, int y)
 {
     if (x > 0)
     {
@@ -565,62 +565,7 @@ void SHU_MoveCursor(int x, int y)
     fflush(stdout);
 }
 
-void SHU_SetCursorPosition(int x, int y)
-{
-    printf("\033[%d;%dH", y + 1, x + 1);
-    fflush(stdout);
-}
-
-void SHU_SetCursorVisibility(int visible)
-{
-    printf(visible ? "\033[?25h" : "\033[?25l");
-    fflush(stdout);
-}
-
-void SHU_SetTerminalAlternate(int enable)
-{
-    printf(enable ? "\033[?1049h" : "\033[?1049l");
-    fflush(stdout);
-}
-
-void SHU_SetAttribute(SHUAttribute attribute, ...)
-{
-    va_list args;
-    va_start(args, attribute);
-
-    unsigned int nextAttribute = attribute;
-    while (nextAttribute != SHUAttribute_Invalid)
-    {
-        if (nextAttribute < SHUAttribute_Invalid)
-        {
-            printf("\033[%dm", nextAttribute);
-        }
-        else if (nextAttribute >= SHU_COLOR_8BIT_START && nextAttribute <= SHU_COLOR_8BIT_END)
-        {
-            unsigned char colorType = (unsigned char)((nextAttribute >> 8) & 0xFF);
-            unsigned char colorValue = (unsigned char)(nextAttribute & 0xFF);
-            printf("\033[%d;5;%dm", colorType, colorValue);
-        }
-        else if (nextAttribute >= SHU_COLOR_24BIT_START && nextAttribute <= SHU_COLOR_24BIT_END)
-        {
-            unsigned char colorType = (unsigned char)((nextAttribute >> 24) & 0xFF);
-            unsigned char colorR = (unsigned char)((nextAttribute >> 16) & 0xFF);
-            unsigned char colorG = (unsigned char)((nextAttribute >> 8) & 0xFF);
-            unsigned char colorB = (unsigned char)(nextAttribute & 0xFF);
-            printf("\033[%d;2;%d;%d;%dm", colorType, colorR, colorG, colorB);
-        }
-        else
-        {
-            SHUI_Assert(0, "Invalid attribute: %d", nextAttribute);
-        }
-
-        nextAttribute = va_arg(args, unsigned int);
-    }
-
-    va_end(args);
-}
-
-void SHU_GetCursorPosition(int *x, int *y)
+void SHU_CursorGetPosition(int *x, int *y)
 {
     SHUI_Assert(x != NULL && y != NULL, "x and y pointers cannot be NULL");
 
@@ -657,7 +602,19 @@ void SHU_GetCursorPosition(int *x, int *y)
     *y = row - 1;
 }
 
-void SHU_GetTerminalSize(int *width, int *height)
+void SHU_CursorSetPosition(int x, int y)
+{
+    printf("\033[%d;%dH", y + 1, x + 1);
+    fflush(stdout);
+}
+
+void SHU_CursorSetVisibility(int visible)
+{
+    printf(visible ? "\033[?25h" : "\033[?25l");
+    fflush(stdout);
+}
+
+void SHU_TerminalGetSize(int *width, int *height)
 {
     SHUI_Assert(width != NULL && height != NULL, "width and height pointers cannot be NULL");
 
@@ -676,19 +633,62 @@ void SHU_GetTerminalSize(int *width, int *height)
 #endif
 }
 
-void SHU_ClearTerminal(void)
+void SHU_TerminalSetAlternate(int enable)
+{
+    printf(enable ? "\033[?1049h" : "\033[?1049l");
+    fflush(stdout);
+}
+
+void SHUI_TerminalSetAttributes(SHUAttribute attribute, ...)
+{
+    va_list args;
+    va_start(args, attribute);
+
+    unsigned int nextAttribute = attribute;
+    while (nextAttribute != SHUAttribute_Invalid)
+    {
+        if (nextAttribute < SHUAttribute_Invalid)
+        {
+            printf("\033[%dm", nextAttribute);
+        }
+        else if (nextAttribute >= SHU_COLOR_8BIT_START && nextAttribute <= SHU_COLOR_8BIT_END)
+        {
+            unsigned char colorType = (unsigned char)((nextAttribute >> 8) & 0xFF);
+            unsigned char colorValue = (unsigned char)(nextAttribute & 0xFF);
+            printf("\033[%d;5;%dm", colorType, colorValue);
+        }
+        else if (nextAttribute >= SHU_COLOR_24BIT_START && nextAttribute <= SHU_COLOR_24BIT_END)
+        {
+            unsigned char colorType = (unsigned char)((nextAttribute >> 24) & 0xFF);
+            unsigned char colorR = (unsigned char)((nextAttribute >> 16) & 0xFF);
+            unsigned char colorG = (unsigned char)((nextAttribute >> 8) & 0xFF);
+            unsigned char colorB = (unsigned char)(nextAttribute & 0xFF);
+            printf("\033[%d;2;%d;%d;%dm", colorType, colorR, colorG, colorB);
+        }
+        else
+        {
+            SHUI_Assert(0, "Invalid attribute: %d", nextAttribute);
+        }
+
+        nextAttribute = va_arg(args, unsigned int);
+    }
+
+    va_end(args);
+}
+
+void SHU_TerminalClear(void)
 {
     printf("\033[2J\033[H");
     fflush(stdout);
 }
 
-void SHU_PutCharacter(int c)
+void SHU_TerminalPutCharacter(int c)
 {
     putchar(c);
     fflush(stdout);
 }
 
-int SHU_PutString(const char *format, ...)
+int SHU_TerminalPutString(const char *format, ...)
 {
     va_list args;
     va_start(args, format);
@@ -698,7 +698,7 @@ int SHU_PutString(const char *format, ...)
     return result;
 }
 
-void SHU_Flush(void)
+void SHU_TerminalFlush(void)
 {
     fflush(stdout);
 }
