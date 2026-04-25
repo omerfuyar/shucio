@@ -346,7 +346,7 @@ static DWORD SHUI_CONSOLE_MODE_RESTORE;
 static struct termios SHUI_TERMIOS_RESTORE;
 #endif
 
-void (*SHUI_AT_EXIT_FUNCTION)(void) = NULL;
+static void (*SHUI_AT_EXIT_FUNCTION)(void) = NULL;
 
 static void SHUI_AT_EXIT(void)
 {
