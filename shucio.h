@@ -378,6 +378,8 @@ void SHU_InitializeConsole(void)
     DWORD dwMode = SHUI_CONSOLE_MODE_RESTORE;
     dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
     SetConsoleMode(hOut, dwMode);
+
+    SetConsoleOutputCP(CP_UTF8);
 #else
     tcgetattr(STDIN_FILENO, &SHUI_TERMIOS_RESTORE);
 
