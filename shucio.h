@@ -267,61 +267,62 @@ void SHU_TerminateConsole(void);
 /// @return Entered key from user.
 SHUKey SHU_InputKey(void);
 
-/// @brief Gets a string input from the user on cursor place, echoes the characters to terminal.
+/// @brief Gets a string input from the user on cursor place
 /// @param buffer Buffer to get user input string.
 /// @param bufferSize Size of the string buffer.
+/// @param echo Either entered characters will be echoed to the terminal or not.
 /// @note Handles basic editing keys like backspace and enter. Sets cursor visibility to true, so dont forget to re-set it to your state. Also does not clean the echoed characters.
-void SHU_InputString(char *buffer, unsigned long long bufferSize);
+void SHU_InputString(char *buffer, unsigned long long bufferSize, char echo);
 
 /// @brief Moves the cursor by the specified amount in the x and y directions.
 /// @param x Amount to move cursor horizontally. Positive values move right, negative values move left.
 /// @param y Amount to move cursor vertically. Positive values move down, negative values move up.
-void SHU_CursorMove(int x, int y);
-
-/// @brief Gets the current cursor position and stores it in the provided x and y pointers. 0,0 is the top-left corner of the terminal.
-/// @param x Pointer to store the x coordinate of the cursor position.
-/// @param y Pointer to store the y coordinate of the cursor position.
-void SHU_CursorGetPosition(int *x, int *y);
+void SHU_MoveCursor(int x, int y);
 
 /// @brief Sets the cursor position to the specified coordinates. 0,0 is the top-left corner of the terminal.
 /// @param x X coordinate.
 /// @param y Y coordinate.
-void SHU_CursorSetPosition(int x, int y);
+void SHU_SetCursorPosition(int x, int y);
 
 /// @brief Sets the visibility of the cursor.
 /// @param visible 1 to show the cursor, 0 to hide it.
-void SHU_CursorSetVisibility(int visible);
+void SHU_SetCursorVisibility(int visible);
+
+/// @brief Enters or exits the terminal's alternate screen buffer. Alternate screen buffer is a separate screen that can be used for full-screen applications, and when you exit it, the original screen content is restored.
+/// @param enable 1 to enter alternate screen buffer, 0 to exit it.
+void SHU_SetTerminalAlternate(int enable);
+
+///!!! This function is not meant to be used directly. Use SHU_SetAttributes macro instead. !!!
+void SHU_SetAttribute(SHUAttribute attribute, ...);
+
+/// @brief Sets the specified set of attributes for text output.
+/// @param attributes Attributes to set. Must be used with SHUAttribute enum. You can also pass multiple attributes by using the variadic arguments.
+#define SHU_SetAttributes(attribute, ...) SHU_SetAttribute(attribute, ##__VA_ARGS__, SHUAttribute_Invalid)
+
+/// @brief Gets the current cursor position and stores it in the provided x and y pointers. 0,0 is the top-left corner of the terminal.
+/// @param x Pointer to store the x coordinate of the cursor position.
+/// @param y Pointer to store the y coordinate of the cursor position.
+void SHU_GetCursorPosition(int *x, int *y);
 
 /// @brief Gets the current terminal size in characters and stores it in the provided width and height pointers.
 /// @param width Pointer to store the width of the terminal.
 /// @param height Pointer to store the height of the terminal.
-void SHU_TerminalGetSize(int *width, int *height);
-
-/// @brief Enters or exits the terminal's alternate screen buffer. Alternate screen buffer is a separate screen that can be used for full-screen applications, and when you exit it, the original screen content is restored.
-/// @param enable 1 to enter alternate screen buffer, 0 to exit it.
-void SHU_TerminalSetAlternate(int enable);
-
-/// !!! This function is not meant to be used directly. Use SHU_TerminalSetAttributes macro instead. !!!
-void SHUI_TerminalSetAttributes(SHUAttribute attribute, ...);
-
-/// @brief Sets the specified set of attributes for text output.
-/// @param attributes Attributes to set. Must be used with SHUAttribute enum. You can also pass multiple attributes by using the variadic arguments.
-#define SHU_TerminalSetAttributes(attribute, ...) SHUI_TerminalSetAttributes(attribute, ##__VA_ARGS__, SHUAttribute_Invalid)
+void SHU_GetTerminalSize(int *width, int *height);
 
 /// @brief Clears the entire terminal screen and moves the cursor to the top-left corner. Note that this does not clear the scrollback buffer, so users can still scroll up to see the previous content.
-void SHU_TerminalClear(void);
+void SHU_ClearTerminal(void);
 
 /// @brief Outputs a single character to the terminal.
 /// @param c Character to output.
-void SHU_TerminalPutCharacter(int c);
+void SHU_PutCharacter(int c);
 
 /// @brief Outputs a formatted string to the terminal. Uses printf-style formatting.
 /// @param format Format string.
 /// @param args Arguments for the format string.
-int SHU_TerminalPutString(const char *format, ...);
+int SHU_PutString(const char *format, ...);
 
 /// @brief Flushes the output buffer so anything that was buffered will be written to the terminal immediately.
-void SHU_TerminalFlush(void);
+void SHU_Flush(void);
 
 #pragma endregion Shucio Declarations
 
@@ -346,7 +347,7 @@ static DWORD SHUI_CONSOLE_MODE_RESTORE;
 static struct termios SHUI_TERMIOS_RESTORE;
 #endif
 
-static void (*SHUI_AT_EXIT_FUNCTION)(void) = NULL;
+void (*SHUI_AT_EXIT_FUNCTION)(void) = NULL;
 
 static void SHUI_AT_EXIT(void)
 {
@@ -378,8 +379,6 @@ void SHU_InitializeConsole(void)
     DWORD dwMode = SHUI_CONSOLE_MODE_RESTORE;
     dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
     SetConsoleMode(hOut, dwMode);
-
-    SetConsoleOutputCP(CP_UTF8);
 #else
     tcgetattr(STDIN_FILENO, &SHUI_TERMIOS_RESTORE);
 
@@ -397,9 +396,9 @@ void SHU_TerminateConsole(void)
 {
     SHUI_AT_EXIT_FUNCTION = NULL;
 
-    SHU_CursorSetVisibility(1);
-    SHU_TerminalSetAttributes(SHUAttribute_Reset);
-    SHU_TerminalSetAlternate(0);
+    SHU_SetCursorVisibility(1);
+    SHU_SetAttributes(SHUAttribute_Reset);
+    SHU_SetTerminalAlternate(0);
 
 #ifdef _WIN32
     SetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE), SHUI_CONSOLE_MODE_RESTORE);
@@ -500,12 +499,12 @@ SHUKey SHU_InputKey(void)
 #endif
 }
 
-void SHU_InputString(char *buffer, unsigned long long bufferSize)
+void SHU_InputString(char *buffer, unsigned long long bufferSize, char echo)
 {
     SHUI_Assert(buffer != NULL, "Buffer cannot be NULL");
     SHUI_Assert(bufferSize > 0, "BufferSize must be greater than 0");
 
-    SHU_CursorSetVisibility(1);
+    SHU_SetCursorVisibility(1);
 
     unsigned long long index = 0;
 
@@ -513,38 +512,42 @@ void SHU_InputString(char *buffer, unsigned long long bufferSize)
     {
         SHUKey key = SHU_InputKey();
 
-        if (key == SHUKey_Enter)
-        {
-            // printf("\n");
-            break;
-        }
-
-        if (key == SHUKey_Backspace || key == SHUKey_Delete)
-        {
-            if (index > 0)
-            {
-                index--;
-                printf("\b \b");
-                fflush(stdout);
-            }
-        }
-
-        else if (key >= SHUKey_Space && key <= SHUKey_Tilde)
+        if (key >= SHUKey_Space && key <= SHUKey_Tilde)
         {
             if (index < bufferSize - 1)
             {
                 buffer[index++] = (char)key;
 
-                putchar((char)key);
-                fflush(stdout);
+                if (echo)
+                {
+                    putchar((char)key);
+                    fflush(stdout);
+                }
             }
+        }
+        else if (key == SHUKey_Backspace || key == SHUKey_Delete)
+        {
+            if (index > 0)
+            {
+                index--;
+
+                if (echo)
+                {
+                    printf("\b \b");
+                    fflush(stdout);
+                }
+            }
+        }
+        else if (key == SHUKey_Enter)
+        {
+            break;
         }
     }
 
     buffer[index] = '\0';
 }
 
-void SHU_CursorMove(int x, int y)
+void SHU_MoveCursor(int x, int y)
 {
     if (x > 0)
     {
@@ -567,81 +570,25 @@ void SHU_CursorMove(int x, int y)
     fflush(stdout);
 }
 
-void SHU_CursorGetPosition(int *x, int *y)
-{
-    SHUI_Assert(x != NULL && y != NULL, "x and y pointers cannot be NULL");
-
-    printf("\033[6n");
-    fflush(stdout);
-
-    // ESC [ row ; col R
-    int row = 0, col = 0;
-
-    char cursorPosBuffer[SHU_STRING_BUFFER_SIZE] = {0};
-    unsigned int i = 0;
-    while (i < SHU_STRING_BUFFER_SIZE - 1)
-    {
-#ifdef _WIN32
-        cursorPosBuffer[i] = (char)_getch();
-#else
-        read(STDIN_FILENO, &cursorPosBuffer[i], 1);
-#endif
-
-        if (cursorPosBuffer[i] == 'R')
-        {
-            break;
-        }
-
-        i++;
-    }
-
-    cursorPosBuffer[i] = '\0';
-
-    SHUI_Assert(cursorPosBuffer[0] == '\x1b' && cursorPosBuffer[1] == '[', "Failed to parse cursor position response");
-    SHUI_Assert(sscanf(cursorPosBuffer + 2, "%d;%d", &row, &col) == 2, "Failed to parse cursor position response");
-
-    *x = col - 1;
-    *y = row - 1;
-}
-
-void SHU_CursorSetPosition(int x, int y)
+void SHU_SetCursorPosition(int x, int y)
 {
     printf("\033[%d;%dH", y + 1, x + 1);
     fflush(stdout);
 }
 
-void SHU_CursorSetVisibility(int visible)
+void SHU_SetCursorVisibility(int visible)
 {
     printf(visible ? "\033[?25h" : "\033[?25l");
     fflush(stdout);
 }
 
-void SHU_TerminalGetSize(int *width, int *height)
-{
-    SHUI_Assert(width != NULL && height != NULL, "width and height pointers cannot be NULL");
-
-#ifdef _WIN32
-    CONSOLE_SCREEN_BUFFER_INFO csbi;
-    GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
-
-    *width = csbi.srWindow.Right - csbi.srWindow.Left + 1;
-    *height = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
-#else
-    struct winsize w;
-    ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
-
-    *width = w.ws_col;
-    *height = w.ws_row;
-#endif
-}
-
-void SHU_TerminalSetAlternate(int enable)
+void SHU_SetTerminalAlternate(int enable)
 {
     printf(enable ? "\033[?1049h" : "\033[?1049l");
     fflush(stdout);
 }
 
-void SHUI_TerminalSetAttributes(SHUAttribute attribute, ...)
+void SHU_SetAttribute(SHUAttribute attribute, ...)
 {
     va_list args;
     va_start(args, attribute);
@@ -678,19 +625,75 @@ void SHUI_TerminalSetAttributes(SHUAttribute attribute, ...)
     va_end(args);
 }
 
-void SHU_TerminalClear(void)
+void SHU_GetCursorPosition(int *x, int *y)
+{
+    SHUI_Assert(x != NULL && y != NULL, "x and y pointers cannot be NULL");
+
+    printf("\033[6n");
+    fflush(stdout);
+
+    // ESC [ row ; col R
+    int row = 0, col = 0;
+
+    char cursorPosBuffer[SHU_STRING_BUFFER_SIZE] = {0};
+    unsigned int i = 0;
+    while (i < SHU_STRING_BUFFER_SIZE - 1)
+    {
+#ifdef _WIN32
+        cursorPosBuffer[i] = (char)_getch();
+#else
+        read(STDIN_FILENO, &cursorPosBuffer[i], 1);
+#endif
+
+        if (cursorPosBuffer[i] == 'R')
+        {
+            break;
+        }
+
+        i++;
+    }
+
+    cursorPosBuffer[i] = '\0';
+
+    SHUI_Assert(cursorPosBuffer[0] == '\x1b' && cursorPosBuffer[1] == '[', "Failed to parse cursor position response");
+    SHUI_Assert(sscanf(cursorPosBuffer + 2, "%d;%d", &row, &col) == 2, "Failed to parse cursor position response");
+
+    *x = col - 1;
+    *y = row - 1;
+}
+
+void SHU_GetTerminalSize(int *width, int *height)
+{
+    SHUI_Assert(width != NULL && height != NULL, "width and height pointers cannot be NULL");
+
+#ifdef _WIN32
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
+
+    *width = csbi.srWindow.Right - csbi.srWindow.Left + 1;
+    *height = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
+#else
+    struct winsize w;
+    ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+
+    *width = w.ws_col;
+    *height = w.ws_row;
+#endif
+}
+
+void SHU_ClearTerminal(void)
 {
     printf("\033[2J\033[H");
     fflush(stdout);
 }
 
-void SHU_TerminalPutCharacter(int c)
+void SHU_PutCharacter(int c)
 {
     putchar(c);
     fflush(stdout);
 }
 
-int SHU_TerminalPutString(const char *format, ...)
+int SHU_PutString(const char *format, ...)
 {
     va_list args;
     va_start(args, format);
@@ -700,7 +703,7 @@ int SHU_TerminalPutString(const char *format, ...)
     return result;
 }
 
-void SHU_TerminalFlush(void)
+void SHU_Flush(void)
 {
     fflush(stdout);
 }
