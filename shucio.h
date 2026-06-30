@@ -1,13 +1,21 @@
 #pragma once
 
-#pragma region Shucio Macros
+#ifndef SHU_HEADER
+#ifdef SHU
+#include SHU
+#else
+#include "shu.h"
+#endif
+#endif
+
+#pragma region Macros
 
 #define SHU_SEQUENCE_BUFFER_SIZE 8
 #define SHU_STRING_BUFFER_SIZE 32
 
-#pragma endregion Shucio Macros
+#pragma endregion Macros
 
-#pragma region Shucio Declarations
+#pragma region Declarations
 
 typedef enum SHUKey
 {
@@ -175,6 +183,7 @@ typedef enum SHUAttribute
     SHUAttribute_ColorFGMagenta = 35,
     SHUAttribute_ColorFGCyan = 36,
     SHUAttribute_ColorFGWhite = 37,
+    // 38 is 8 bit color
     SHUAttribute_ColorFGDefault = 39, // implementation defined (according to standard)
 
     // Set background color
@@ -186,6 +195,7 @@ typedef enum SHUAttribute
     SHUAttribute_ColorBGMagenta = 45,
     SHUAttribute_ColorBGCyan = 46,
     SHUAttribute_ColorBGWhite = 47,
+    // 48 is 24 bit color
     SHUAttribute_ColorBGDefault = 49, // implementation defined (according to standard)
 
     SHUAttribute_Framed = 51,
@@ -224,8 +234,8 @@ typedef enum SHUAttribute
     SHUAttribute_Invalid, //!!! not meant for use !!!
 } SHUAttribute;
 
-// Select alternate font n-10
-#define SHUAttribute_AlternateFont(n) (10 + (n)) // n is between 1 and 9
+// Select alternate font n-10, n is between 1 and 9
+#define SHUAttribute_AlternateFont(n) (SHUAttribute_PrimaryFont + (n))
 
 /*
 Set foreground color from one of 256 pre-selected colors. Not widely supported. n is between 0 and 255.
@@ -234,7 +244,7 @@ Set foreground color from one of 256 pre-selected colors. Not widely supported. 
 0x10-0xE7	6 × 6 × 6 cube (216 colors): 16 + 36 × r + 6 × g + b (0 ≤ r, g, b ≤ 5)
 0xE8-0xFF	grayscale from black to white in 24 steps
 */
-#define SHUAttribute_ColorFG8(n) ((unsigned int)38 << 8 | (unsigned int)(n))
+#define SHUAttribute_ColorFG8(n) ((u32)38 << 8 | (u32)(n))
 
 /*
 Set background color from one of 256 pre-selected colors. Not widely supported. n is between 0 and 255.
@@ -243,15 +253,15 @@ Set background color from one of 256 pre-selected colors. Not widely supported. 
 0x10-0xE7	6 × 6 × 6 cube (216 colors): 16 + 36 × r + 6 × g + b (0 ≤ r, g, b ≤ 5)
 0xE8-0xFF	grayscale from black to white in 24 steps
 */
-#define SHUAttribute_ColorBG8(n) ((unsigned int)48 << 8 | (unsigned int)(n))
+#define SHUAttribute_ColorBG8(n) ((u32)48 << 8 | (u32)(n))
 
 #define SHU_COLOR_8BIT_START (SHUAttribute_ColorFG8(0))
 #define SHU_COLOR_8BIT_END (SHUAttribute_ColorBG8(255))
 
 // Set RGB foreground color. Not widely supported. r, g, b are between 0 and 255.
-#define SHUAttribute_ColorFG24(r, g, b) ((unsigned int)38 << 24 | (unsigned int)(r) << 16 | (unsigned int)(g) << 8 | (unsigned int)(b))
+#define SHUAttribute_ColorFG24(r, g, b) ((u32)38 << 24 | (u32)(r) << 16 | (u32)(g) << 8 | (u32)(b))
 // Set RGB background color. Not widely supported. r, g, b are between 0 and 255.
-#define SHUAttribute_ColorBG24(r, g, b) ((unsigned int)48 << 24 | (unsigned int)(r) << 16 | (unsigned int)(g) << 8 | (unsigned int)(b))
+#define SHUAttribute_ColorBG24(r, g, b) ((u32)48 << 24 | (u32)(r) << 16 | (u32)(g) << 8 | (u32)(b))
 
 #define SHU_COLOR_24BIT_START (SHUAttribute_ColorFG24(0, 0, 0))
 #define SHU_COLOR_24BIT_END (SHUAttribute_ColorBG24(255, 255, 255))
@@ -272,25 +282,25 @@ SHUKey SHU_InputKey(void);
 /// @param bufferSize Size of the string buffer.
 /// @param echo Either entered characters will be echoed to the terminal or not.
 /// @note Handles basic editing keys like backspace and enter. Sets cursor visibility to true, so dont forget to re-set it to your state. Also does not clean the echoed characters.
-void SHU_InputString(char *buffer, unsigned long long bufferSize, char echo);
+void SHU_InputString(char *buffer, usz bufferSize, char echo);
 
 /// @brief Moves the cursor by the specified amount in the x and y directions.
 /// @param x Amount to move cursor horizontally. Positive values move right, negative values move left.
 /// @param y Amount to move cursor vertically. Positive values move down, negative values move up.
-void SHU_MoveCursor(int x, int y);
+void SHU_MoveCursor(i32 x, i32 y);
 
 /// @brief Sets the cursor position to the specified coordinates. 0,0 is the top-left corner of the terminal.
 /// @param x X coordinate.
 /// @param y Y coordinate.
-void SHU_SetCursorPosition(int x, int y);
+void SHU_SetCursorPosition(i32 x, i32 y);
 
 /// @brief Sets the visibility of the cursor.
 /// @param visible 1 to show the cursor, 0 to hide it.
-void SHU_SetCursorVisibility(int visible);
+void SHU_SetCursorVisibility(bool visible);
 
 /// @brief Enters or exits the terminal's alternate screen buffer. Alternate screen buffer is a separate screen that can be used for full-screen applications, and when you exit it, the original screen content is restored.
 /// @param enable 1 to enter alternate screen buffer, 0 to exit it.
-void SHU_SetTerminalAlternate(int enable);
+void SHU_SetTerminalAlternate(bool enable);
 
 ///!!! This function is not meant to be used directly. Use SHU_SetAttributes macro instead. !!!
 void SHU_SetAttribute(SHUAttribute attribute, ...);
@@ -302,19 +312,19 @@ void SHU_SetAttribute(SHUAttribute attribute, ...);
 /// @brief Gets the current cursor position and stores it in the provided x and y pointers. 0,0 is the top-left corner of the terminal.
 /// @param x Pointer to store the x coordinate of the cursor position.
 /// @param y Pointer to store the y coordinate of the cursor position.
-void SHU_GetCursorPosition(int *x, int *y);
+void SHU_GetCursorPosition(i32 *x, i32 *y);
 
 /// @brief Gets the current terminal size in characters and stores it in the provided width and height pointers.
 /// @param width Pointer to store the width of the terminal.
 /// @param height Pointer to store the height of the terminal.
-void SHU_GetTerminalSize(int *width, int *height);
+void SHU_GetTerminalSize(i32 *width, i32 *height);
 
 /// @brief Clears the entire terminal screen and moves the cursor to the top-left corner. Note that this does not clear the scrollback buffer, so users can still scroll up to see the previous content.
 void SHU_ClearTerminal(void);
 
 /// @brief Outputs a single character to the terminal.
-/// @param c Character to output.
-void SHU_PutCharacter(int c);
+/// @param character Character to output.
+void SHU_PutCharacter(i32 character);
 
 /// @brief Outputs a formatted string to the terminal. Uses printf-style formatting.
 /// @param format Format string.
@@ -324,11 +334,11 @@ int SHU_PutString(const char *format, ...);
 /// @brief Flushes the output buffer so anything that was buffered will be written to the terminal immediately.
 void SHU_Flush(void);
 
-#pragma endregion Shucio Declarations
+#pragma endregion Declarations
 
-#pragma region Shucio Definitions
+#pragma region Definitions
 
-#ifdef SHUCIO_IMPLEMENTATION
+#ifdef SHU_IMPLEMENTATION
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -347,13 +357,13 @@ static DWORD SHUI_CONSOLE_MODE_RESTORE;
 static struct termios SHUI_TERMIOS_RESTORE;
 #endif
 
-void (*SHUI_AT_EXIT_FUNCTION)(void) = NULL;
+void (*SHUCIO_AT_EXIT_FUNCTION)(void) = NULL;
 
-static void SHUI_AT_EXIT(void)
+static void SHUCIO_AT_EXIT(void)
 {
-    if (SHUI_AT_EXIT_FUNCTION != NULL)
+    if (SHUCIO_AT_EXIT_FUNCTION != NULL)
     {
-        SHUI_AT_EXIT_FUNCTION();
+        SHUCIO_AT_EXIT_FUNCTION();
     }
 }
 
@@ -369,8 +379,8 @@ static void SHUI_AT_EXIT(void)
 
 void SHU_InitializeConsole(void)
 {
-    SHUI_AT_EXIT_FUNCTION = SHU_TerminateConsole;
-    atexit(SHUI_AT_EXIT);
+    SHUCIO_AT_EXIT_FUNCTION = SHU_TerminateConsole;
+    atexit(SHUCIO_AT_EXIT);
 
 #ifdef _WIN32
     HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -394,7 +404,7 @@ void SHU_InitializeConsole(void)
 
 void SHU_TerminateConsole(void)
 {
-    SHUI_AT_EXIT_FUNCTION = NULL;
+    SHUCIO_AT_EXIT_FUNCTION = NULL;
 
     SHU_SetCursorVisibility(1);
     SHU_SetAttributes(SHUAttribute_Reset);
@@ -443,7 +453,7 @@ SHUKey SHU_InputKey(void)
     if (ch == (unsigned char)SHUKey_Escape) // '\x1b'
     {
         unsigned char sequenceBuffer[SHU_SEQUENCE_BUFFER_SIZE];
-        unsigned char sequenceCount = 0;
+        u8 sequenceCount = 0;
 
         // Read the first character (usually '[' or 'O')
         if (read(STDIN_FILENO, &sequenceBuffer[sequenceCount], 1) != 1)
@@ -499,14 +509,14 @@ SHUKey SHU_InputKey(void)
 #endif
 }
 
-void SHU_InputString(char *buffer, unsigned long long bufferSize, char echo)
+void SHU_InputString(char *buffer, usz bufferSize, char echo)
 {
     SHUI_Assert(buffer != NULL, "Buffer cannot be NULL");
     SHUI_Assert(bufferSize > 0, "BufferSize must be greater than 0");
 
     SHU_SetCursorVisibility(1);
 
-    unsigned long long index = 0;
+    usz index = 0;
 
     while (1)
     {
@@ -547,7 +557,7 @@ void SHU_InputString(char *buffer, unsigned long long bufferSize, char echo)
     buffer[index] = '\0';
 }
 
-void SHU_MoveCursor(int x, int y)
+void SHU_MoveCursor(i32 x, i32 y)
 {
     if (x > 0)
     {
@@ -570,19 +580,19 @@ void SHU_MoveCursor(int x, int y)
     fflush(stdout);
 }
 
-void SHU_SetCursorPosition(int x, int y)
+void SHU_SetCursorPosition(i32 x, i32 y)
 {
     printf("\033[%d;%dH", y + 1, x + 1);
     fflush(stdout);
 }
 
-void SHU_SetCursorVisibility(int visible)
+void SHU_SetCursorVisibility(bool visible)
 {
     printf(visible ? "\033[?25h" : "\033[?25l");
     fflush(stdout);
 }
 
-void SHU_SetTerminalAlternate(int enable)
+void SHU_SetTerminalAlternate(bool enable)
 {
     printf(enable ? "\033[?1049h" : "\033[?1049l");
     fflush(stdout);
@@ -593,7 +603,7 @@ void SHU_SetAttribute(SHUAttribute attribute, ...)
     va_list args;
     va_start(args, attribute);
 
-    unsigned int nextAttribute = attribute;
+    u32 nextAttribute = attribute;
     while (nextAttribute != SHUAttribute_Invalid)
     {
         if (nextAttribute < SHUAttribute_Invalid)
@@ -619,13 +629,13 @@ void SHU_SetAttribute(SHUAttribute attribute, ...)
             SHUI_Assert(0, "Invalid attribute: %d", nextAttribute);
         }
 
-        nextAttribute = va_arg(args, unsigned int);
+        nextAttribute = va_arg(args, u32);
     }
 
     va_end(args);
 }
 
-void SHU_GetCursorPosition(int *x, int *y)
+void SHU_GetCursorPosition(i32 *x, i32 *y)
 {
     SHUI_Assert(x != NULL && y != NULL, "x and y pointers cannot be NULL");
 
@@ -636,7 +646,7 @@ void SHU_GetCursorPosition(int *x, int *y)
     int row = 0, col = 0;
 
     char cursorPosBuffer[SHU_STRING_BUFFER_SIZE] = {0};
-    unsigned int i = 0;
+    u32 i = 0;
     while (i < SHU_STRING_BUFFER_SIZE - 1)
     {
 #ifdef _WIN32
@@ -662,7 +672,7 @@ void SHU_GetCursorPosition(int *x, int *y)
     *y = row - 1;
 }
 
-void SHU_GetTerminalSize(int *width, int *height)
+void SHU_GetTerminalSize(i32 *width, i32 *height)
 {
     SHUI_Assert(width != NULL && height != NULL, "width and height pointers cannot be NULL");
 
@@ -687,9 +697,9 @@ void SHU_ClearTerminal(void)
     fflush(stdout);
 }
 
-void SHU_PutCharacter(int c)
+void SHU_PutCharacter(i32 character)
 {
-    putchar(c);
+    putchar(character);
     fflush(stdout);
 }
 
@@ -710,4 +720,4 @@ void SHU_Flush(void)
 
 #endif
 
-#pragma endregion Shucio Definitions
+#pragma endregion Definitions
