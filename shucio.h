@@ -303,11 +303,11 @@ void SHU_SetCursorVisibility(bool visible);
 void SHU_SetTerminalAlternate(bool enable);
 
 ///!!! This function is not meant to be used directly. Use SHU_SetAttributes macro instead. !!!
-void SHU_SetAttribute(SHUAttribute attribute, ...);
+void SHUI_SetAttribute(SHUAttribute attribute, ...);
 
 /// @brief Sets the specified set of attributes for text output.
 /// @param attributes Attributes to set. Must be used with SHUAttribute enum. You can also pass multiple attributes by using the variadic arguments.
-#define SHU_SetAttributes(attribute, ...) SHU_SetAttribute(attribute, ##__VA_ARGS__, SHUAttribute_Invalid)
+#define SHU_SetAttributes(attribute, ...) SHUI_SetAttribute(attribute, ##__VA_ARGS__, SHUAttribute_Invalid)
 
 /// @brief Gets the current cursor position and stores it in the provided x and y pointers. 0,0 is the top-left corner of the terminal.
 /// @param x Pointer to store the x coordinate of the cursor position.
@@ -329,7 +329,7 @@ void SHU_PutCharacter(i32 character);
 /// @brief Outputs a formatted string to the terminal. Uses printf-style formatting.
 /// @param format Format string.
 /// @param args Arguments for the format string.
-int SHU_PutString(const char *format, ...);
+i32 SHU_PutString(const char *format, ...) __attribute__((format(printf, 1, 2)));
 
 /// @brief Flushes the output buffer so anything that was buffered will be written to the terminal immediately.
 void SHU_Flush(void);
@@ -598,7 +598,7 @@ void SHU_SetTerminalAlternate(bool enable)
     fflush(stdout);
 }
 
-void SHU_SetAttribute(SHUAttribute attribute, ...)
+void SHUI_SetAttribute(SHUAttribute attribute, ...)
 {
     va_list args;
     va_start(args, attribute);
@@ -703,7 +703,7 @@ void SHU_PutCharacter(i32 character)
     fflush(stdout);
 }
 
-int SHU_PutString(const char *format, ...)
+i32 SHU_PutString(const char *format, ...)
 {
     va_list args;
     va_start(args, format);
