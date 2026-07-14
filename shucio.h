@@ -348,22 +348,26 @@ void SHU_Flush(void);
 #include <windows.h>
 #include <conio.h>
 
-static DWORD SHUI_CONSOLE_MODE_RESTORE;
+typedef DWORD SHUTerminalContext;
 #else
 #include <termios.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
 
-static struct termios SHUI_TERMIOS_RESTORE;
+typedef struct termios SHUTerminalContext;
 #endif
 
-void (*SHUCIO_AT_EXIT_FUNCTION)(void) = NULL;
+static struct
+{
+    SHUTerminalContext context;
+    void (*atExitFunction)(void);
+} SHUCIO = {0};
 
 static void SHUCIO_AT_EXIT(void)
 {
-    if (SHUCIO_AT_EXIT_FUNCTION != NULL)
+    if (SHUCIO.atExitFunction != NULL)
     {
-        SHUCIO_AT_EXIT_FUNCTION();
+        SHUCIO.atExitFunction();
     }
 }
 
@@ -379,20 +383,20 @@ static void SHUCIO_AT_EXIT(void)
 
 void SHU_InitializeConsole(void)
 {
-    SHUCIO_AT_EXIT_FUNCTION = SHU_TerminateConsole;
+    SHUCIO.atExitFunction = SHU_TerminateConsole;
     atexit(SHUCIO_AT_EXIT);
 
 #ifdef _WIN32
     HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-    GetConsoleMode(hOut, &SHUI_CONSOLE_MODE_RESTORE);
+    GetConsoleMode(hOut, &SHUCIO.context);
 
-    DWORD dwMode = SHUI_CONSOLE_MODE_RESTORE;
+    SHUTerminalContext dwMode = SHUCIO.context;
     dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
     SetConsoleMode(hOut, dwMode);
 #else
-    tcgetattr(STDIN_FILENO, &SHUI_TERMIOS_RESTORE);
+    tcgetattr(STDIN_FILENO, &SHUCIO.context);
 
-    struct termios rawTermios = SHUI_TERMIOS_RESTORE;
+    SHUTerminalContext rawTermios = SHUCIO.context;
 
     rawTermios.c_lflag &= ~((tcflag_t)ECHO | (tcflag_t)ICANON);
     rawTermios.c_cc[VMIN] = 1;
@@ -404,16 +408,16 @@ void SHU_InitializeConsole(void)
 
 void SHU_TerminateConsole(void)
 {
-    SHUCIO_AT_EXIT_FUNCTION = NULL;
+    SHUCIO.atExitFunction = NULL;
 
     SHU_SetCursorVisibility(1);
     SHU_SetAttributes(SHUAttribute_Reset);
     SHU_SetTerminalAlternate(0);
 
 #ifdef _WIN32
-    SetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE), SHUI_CONSOLE_MODE_RESTORE);
+    SetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE), SHUCIO.context);
 #else
-    tcsetattr(STDIN_FILENO, TCSAFLUSH, &SHUI_TERMIOS_RESTORE);
+    tcsetattr(STDIN_FILENO, TCSAFLUSH, &SHUCIO.context);
 #endif
 }
 
