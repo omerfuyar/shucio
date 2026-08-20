@@ -278,11 +278,10 @@ void SHU_TerminateConsole(void);
 SHUKey SHU_InputKey(void);
 
 /// @brief Gets a string input from the user on cursor place
-/// @param buffer Buffer to get user input string.
-/// @param bufferSize Size of the string buffer.
+/// @param buffer Slice to write the user input string into. buffer.data must point to writable memory of at least buffer.size bytes.
 /// @param echo Either entered characters will be echoed to the terminal or not.
-/// @note Handles basic editing keys like backspace and enter. Sets cursor visibility to true, so dont forget to re-set it to your state. Also does not clean the echoed characters.
-void SHU_InputString(char *buffer, usz bufferSize, char echo);
+/// @note Handles basic editing keys like backspace and enter. Sets cursor visibility to true, so dont forget to re-set it to your state. Also does not clean the echoed characters. Null-terminates within buffer.size, so the maximum input length is buffer.size - 1.
+void SHU_InputString(SHUSlice buffer, bool echo);
 
 /// @brief Moves the cursor by the specified amount in the x and y directions.
 /// @param x Amount to move cursor horizontally. Positive values move right, negative values move left.
@@ -371,16 +370,6 @@ static void SHUCIO_AT_EXIT(void)
     }
 }
 
-#define SHUI_Assert(condition, str, ...)                                                                              \
-    do                                                                                                                \
-    {                                                                                                                 \
-        if (!(condition))                                                                                             \
-        {                                                                                                             \
-            fprintf(stderr, "Assertion failed: %s, %s, %d : " str "\n", __FILE__, __func__, __LINE__, ##__VA_ARGS__); \
-            exit(EXIT_FAILURE);                                                                                       \
-        }                                                                                                             \
-    } while (0)
-
 void SHU_InitializeConsole(void)
 {
     SHUCIO.atExitFunction = SHU_TerminateConsole;
@@ -424,11 +413,11 @@ void SHU_TerminateConsole(void)
 SHUKey SHU_InputKey(void)
 {
 #ifdef _WIN32
-    int ch = _getch();
+    i32 ch = _getch();
 
     if (ch == 0 || ch == 0xE0)
     {
-        int ext = _getch();
+        i32 ext = _getch();
 
         switch (ext)
         {
@@ -447,16 +436,16 @@ SHUKey SHU_InputKey(void)
 
     return (SHUKey)ch;
 #else
-    unsigned char ch;
+    u8 ch;
 
     if (read(STDIN_FILENO, &ch, 1) != 1)
     {
         return SHUKey_Invalid;
     }
 
-    if (ch == (unsigned char)SHUKey_Escape) // '\x1b'
+    if (ch == (u8)SHUKey_Escape) // '\x1b'
     {
-        unsigned char sequenceBuffer[SHU_SEQUENCE_BUFFER_SIZE];
+        u8 sequenceBuffer[SHU_SEQUENCE_BUFFER_SIZE];
         u8 sequenceCount = 0;
 
         // Read the first character (usually '[' or 'O')
@@ -465,7 +454,7 @@ SHUKey SHU_InputKey(void)
             return SHUKey_Escape; // It was just an isolated escape key press
         }
 
-        unsigned char currentChar = sequenceBuffer[sequenceCount];
+        u8 currentChar = sequenceBuffer[sequenceCount];
         sequenceCount++;
 
         if (currentChar == '[' || currentChar == 'O')
@@ -513,13 +502,14 @@ SHUKey SHU_InputKey(void)
 #endif
 }
 
-void SHU_InputString(char *buffer, usz bufferSize, char echo)
+void SHU_InputString(SHUSlice buffer, bool echo)
 {
-    SHUI_Assert(buffer != NULL, "Buffer cannot be NULL");
-    SHUI_Assert(bufferSize > 0, "BufferSize must be greater than 0");
+    SHU_AssertNullPointer(buffer.data);
+    SHU_AssertSlice(buffer);
 
     SHU_SetCursorVisibility(1);
 
+    char *chars = (char *)buffer.data;
     usz index = 0;
 
     while (1)
@@ -528,9 +518,9 @@ void SHU_InputString(char *buffer, usz bufferSize, char echo)
 
         if (key >= SHUKey_Space && key <= SHUKey_Tilde)
         {
-            if (index < bufferSize - 1)
+            if (index < buffer.size - 1)
             {
-                buffer[index++] = (char)key;
+                chars[index++] = (char)key;
 
                 if (echo)
                 {
@@ -558,7 +548,7 @@ void SHU_InputString(char *buffer, usz bufferSize, char echo)
         }
     }
 
-    buffer[index] = '\0';
+    chars[index] = '\0';
 }
 
 void SHU_MoveCursor(i32 x, i32 y)
@@ -616,21 +606,21 @@ void SHUI_SetAttribute(SHUAttribute attribute, ...)
         }
         else if (nextAttribute >= SHU_COLOR_8BIT_START && nextAttribute <= SHU_COLOR_8BIT_END)
         {
-            unsigned char colorType = (unsigned char)((nextAttribute >> 8) & 0xFF);
-            unsigned char colorValue = (unsigned char)(nextAttribute & 0xFF);
+            u8 colorType = (u8)((nextAttribute >> 8) & 0xFF);
+            u8 colorValue = (u8)(nextAttribute & 0xFF);
             printf("\033[%d;5;%dm", colorType, colorValue);
         }
         else if (nextAttribute >= SHU_COLOR_24BIT_START && nextAttribute <= SHU_COLOR_24BIT_END)
         {
-            unsigned char colorType = (unsigned char)((nextAttribute >> 24) & 0xFF);
-            unsigned char colorR = (unsigned char)((nextAttribute >> 16) & 0xFF);
-            unsigned char colorG = (unsigned char)((nextAttribute >> 8) & 0xFF);
-            unsigned char colorB = (unsigned char)(nextAttribute & 0xFF);
+            u8 colorType = (u8)((nextAttribute >> 24) & 0xFF);
+            u8 colorR = (u8)((nextAttribute >> 16) & 0xFF);
+            u8 colorG = (u8)((nextAttribute >> 8) & 0xFF);
+            u8 colorB = (u8)(nextAttribute & 0xFF);
             printf("\033[%d;2;%d;%d;%dm", colorType, colorR, colorG, colorB);
         }
         else
         {
-            SHUI_Assert(0, "Invalid attribute: %d", nextAttribute);
+            SHU_Assert(0, "Invalid attribute: %d", nextAttribute);
         }
 
         nextAttribute = va_arg(args, u32);
@@ -641,16 +631,17 @@ void SHUI_SetAttribute(SHUAttribute attribute, ...)
 
 void SHU_GetCursorPosition(i32 *x, i32 *y)
 {
-    SHUI_Assert(x != NULL && y != NULL, "x and y pointers cannot be NULL");
+    SHU_AssertNullPointer(x);
+    SHU_AssertNullPointer(y);
 
     printf("\033[6n");
     fflush(stdout);
 
     // ESC [ row ; col R
-    int row = 0, col = 0;
+    i32 row = 0, col = 0;
 
     char cursorPosBuffer[SHU_STRING_BUFFER_SIZE] = {0};
-    u32 i = 0;
+    usz i = 0;
     while (i < SHU_STRING_BUFFER_SIZE - 1)
     {
 #ifdef _WIN32
@@ -669,8 +660,8 @@ void SHU_GetCursorPosition(i32 *x, i32 *y)
 
     cursorPosBuffer[i] = '\0';
 
-    SHUI_Assert(cursorPosBuffer[0] == '\x1b' && cursorPosBuffer[1] == '[', "Failed to parse cursor position response");
-    SHUI_Assert(sscanf(cursorPosBuffer + 2, "%d;%d", &row, &col) == 2, "Failed to parse cursor position response");
+    SHU_Assert(cursorPosBuffer[0] == '\x1b' && cursorPosBuffer[1] == '[', "Failed to parse cursor position response");
+    SHU_Assert(sscanf(cursorPosBuffer + 2, "%d;%d", &row, &col) == 2, "Failed to parse cursor position response");
 
     *x = col - 1;
     *y = row - 1;
@@ -678,7 +669,8 @@ void SHU_GetCursorPosition(i32 *x, i32 *y)
 
 void SHU_GetTerminalSize(i32 *width, i32 *height)
 {
-    SHUI_Assert(width != NULL && height != NULL, "width and height pointers cannot be NULL");
+    SHU_AssertNullPointer(width);
+    SHU_AssertNullPointer(height);
 
 #ifdef _WIN32
     CONSOLE_SCREEN_BUFFER_INFO csbi;
@@ -711,7 +703,7 @@ i32 SHU_PutString(const char *format, ...)
 {
     va_list args;
     va_start(args, format);
-    int result = vprintf(format, args);
+    i32 result = vprintf(format, args);
     va_end(args);
 
     return result;
